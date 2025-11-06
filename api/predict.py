@@ -1,5 +1,4 @@
-from fastapi import APIRouter
-from starlette import status
+from fastapi import APIRouter, status
 
 
 router = APIRouter()
@@ -8,9 +7,12 @@ router = APIRouter()
 def home():
     return "Welcome to the Tomato Plant Disease API service"
 
-@router.post("/health")
+@router.get("/health", status_code=status.HTTP_200_OK)
 def check_health():
-    return {"status": status.HTTP_302_FOUND}
+    return {"status": "ok"}
+
+
+
 
 
 
