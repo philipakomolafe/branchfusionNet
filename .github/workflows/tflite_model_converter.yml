@@ -30,16 +30,17 @@ jobs:
         python-version: '3.9'
     
     - name: Install dependencies
-      run: pip install tensorflow==2.18.0
+      run: |
+        pip install tensorflow==2.18.0
+        pip install ai-edge-litert
     
-    - name: Convert model and show info
+    - name: Convert model with proper data type handling
       run: |
         python -c "
         import sys
         import os
         import tensorflow as tf
-        sys.path.append('src')
-        from tflite_converter import convert_model_to_tflite
+        import numpy as np
         
         keras_path = '${{ github.event.inputs.model_path || 'model/MultiBranchFusionNet-0.keras' }}'
         tflite_path = '${{ github.event.inputs.output_path || 'model/MultiBranchFusionNet-0.tflite' }}'
@@ -48,16 +49,50 @@ jobs:
             print(f'Model not found: {keras_path}')
             sys.exit(1)
         
-        # Convert model
-        result = convert_model_to_tflite(keras_path, tflite_path)
-        
-        if result == False:
-            print('Conversion failed')
-            sys.exit(1)
-        
-        # Show model info if conversion successful
-        if os.path.exists(tflite_path):
-            interpreter = tf.lite.Interpreter(model_path=tflite_path)
+        try:
+            print(f'Loading model from: {keras_path}')
+            model = tf.keras.models.load_model(keras_path)
+            
+            # Convert model to float32 to avoid bf16 issues
+            print('Converting model to float32...')
+            for layer in model.layers:
+                if hasattr(layer, 'dtype'):
+                    layer.dtype = tf.float32
+            
+            # Create converter with explicit dtype policy
+            converter = tf.lite.TFLiteConverter.from_keras_model(model)
+            
+            # Set converter options to handle data types properly
+            converter.target_spec.supported_types = [tf.float32]
+            converter.inference_input_type = tf.float32
+            converter.inference_output_type = tf.float32
+            
+            # Disable experimental features that might cause issues
+            converter.experimental_new_converter = False
+            converter.experimental_new_quantizer = False
+            
+            print('Converting to TFLite...')
+            tflite_model = converter.convert()
+            
+            # Save the model
+            os.makedirs(os.path.dirname(tflite_path), exist_ok=True)
+            with open(tflite_path, 'wb') as f:
+                f.write(tflite_model)
+            
+            print(f'✅ TFLite model saved to {tflite_path}')
+            
+            # Show model info using LiteRT
+            try:
+                import ai_edge_litert.interpreter as litert_interpreter
+                interpreter = litert_interpreter.Interpreter(model_path=tflite_path)
+                print('Using LiteRT interpreter')
+            except ImportError:
+                # Fallback to TensorFlow Lite
+                import warnings
+                warnings.filterwarnings('ignore')
+                interpreter = tf.lite.Interpreter(model_path=tflite_path)
+                print('Using TensorFlow Lite interpreter (deprecated)')
+            
             interpreter.allocate_tensors()
             
             input_details = interpreter.get_input_details()
@@ -67,10 +102,15 @@ jobs:
             print(f'✅ Conversion successful!')
             print(f'Model: {tflite_path}')
             print(f'Size: {size_mb:.1f} MB')
-            print(f'Input: {input_details[0][\"shape\"].tolist()}')
-            print(f'Output: {output_details[0][\"shape\"].tolist()}')
-        else:
-            print('❌ TFLite model not created')
+            print(f'Input shape: {input_details[0][\"shape\"].tolist()}')
+            print(f'Input dtype: {input_details[0][\"dtype\"]}')
+            print(f'Output shape: {output_details[0][\"shape\"].tolist()}')
+            print(f'Output dtype: {output_details[0][\"dtype\"]}')
+            
+        except Exception as e:
+            print(f'❌ Conversion failed: {str(e)}')
+            import traceback
+            traceback.print_exc()
             sys.exit(1)
         "
     
