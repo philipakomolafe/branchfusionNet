@@ -3,12 +3,16 @@ import logging
 import pathlib
 import numpy as np
 from PIL import Image
-from tensorflow.keras.models import load_model
+import tensorflow as tf
 import cv2
 from collections import Counter
+import warnings
 
 logger = logging.getLogger(__name__)
-MODEL_PATH = pathlib.Path(__file__).parent.parent / "model" / "MultiBranchFusionNet-0.keras"
+# Updated to use TFLite model
+TFLITE_MODEL_PATH = pathlib.Path(__file__).parent.parent / "model" / "MultiBranchFusionNet-0.tflite"
+KERAS_MODEL_PATH = pathlib.Path(__file__).parent.parent / "model" / "MultiBranchFusionNet-0.keras"
+
 class_names = [
     "Grey_leaf_spot_(fungi)",
     "Tomato___Bacterial_spot", 
@@ -23,32 +27,118 @@ class_names = [
 ]
 
 class Predictor:
-    """Predictor class for tomato plant disease classification."""
-    def __init__(self, model_path: str | pathlib.Path):
-        self.model_path = model_path
-        self.model = None
+    """Predictor class for tomato plant disease classification using TFLite."""
+    def __init__(self, tflite_model_path: str | pathlib.Path, keras_model_path: str | pathlib.Path = None):
+        self.tflite_model_path = tflite_model_path
+        self.keras_model_path = keras_model_path
+        self.interpreter = None
+        self.input_details = None
+        self.output_details = None
+        self.model_type = None
 
     def load_model(self) -> None:
-        """Load the trained model from the specified path."""
+        """Load the TFLite model with fallback to Keras model."""
         try:
-            self.model = load_model(self.model_path)
-            logger.info(f"Model loaded successfully from {self.model_path}")
+            # Try to load TFLite model first
+            if self.tflite_model_path.exists():
+                self._load_tflite_model()
+                return
+            
+            # Fallback to Keras model if TFLite doesn't exist
+            if self.keras_model_path and self.keras_model_path.exists():
+                self._load_keras_model()
+                return
+            
+            raise FileNotFoundError(f"Neither TFLite model ({self.tflite_model_path}) nor Keras model found")
+            
         except Exception as e:
-            logger.error(f"Error loading model from {self.model_path}: {e}")
+            logger.error(f"Error loading model: {e}")
+            # Try fallback to Keras model
+            if self.keras_model_path and self.keras_model_path.exists():
+                logger.info("Attempting fallback to Keras model...")
+                self._load_keras_model()
+            else:
+                raise
+    
+    def _load_tflite_model(self) -> None:
+        """Load TFLite model using LiteRT or TensorFlow Lite."""
+        try:
+            # Try using LiteRT first (new TensorFlow Lite)
+            try:
+                import ai_edge_litert.interpreter as litert_interpreter
+                self.interpreter = litert_interpreter.Interpreter(model_path=str(self.tflite_model_path))
+                logger.info("Using LiteRT interpreter")
+            except ImportError:
+                # Fallback to TensorFlow Lite with warning suppression
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore")
+                    self.interpreter = tf.lite.Interpreter(model_path=str(self.tflite_model_path))
+                logger.info("Using TensorFlow Lite interpreter")
+            
+            self.interpreter.allocate_tensors()
+            
+            # Get input and output tensors
+            self.input_details = self.interpreter.get_input_details()
+            self.output_details = self.interpreter.get_output_details()
+            self.model_type = "tflite"
+            
+            logger.info(f"TFLite model loaded successfully from {self.tflite_model_path}")
+            logger.info(f"Input shape: {self.input_details[0]['shape']}")
+            logger.info(f"Output shape: {self.output_details[0]['shape']}")
+            
+        except Exception as e:
+            logger.error(f"Failed to load TFLite model: {e}")
+            raise
+    
+    def _load_keras_model(self) -> None:
+        """Load Keras model as fallback."""
+        try:
+            from tensorflow.keras.models import load_model
+            self.model = load_model(self.keras_model_path)
+            self.model_type = "keras"
+            logger.info(f"Keras model loaded successfully from {self.keras_model_path}")
+        except Exception as e:
+            logger.error(f"Failed to load Keras model: {e}")
+            raise
 
     def preprocess(self, image: Image.Image) -> np.ndarray:
         """Preprocess the input image for prediction."""
-        image = image.resize((224, 224))
-        image_array = np.array(image) / 255.0  # Normalize to [0, 1]
+        if self.model_type == "tflite":
+            # Get input shape from TFLite model
+            input_shape = self.input_details[0]['shape']
+            target_size = (input_shape[1], input_shape[2])  # (height, width)
+        else:
+            target_size = (224, 224)  # Default for Keras model
+        
+        # Resize and normalize
+        image = image.resize(target_size)
+        image_array = np.array(image, dtype=np.float32) / 255.0
         image_array = np.expand_dims(image_array, axis=0)  # Add batch dimension
         return image_array
     
-    def predict(self, processed_input) -> np.ndarray:
+    def predict(self, processed_input: np.ndarray) -> np.ndarray:
         """Run prediction on preprocessed input."""
-        if self.model is None:
-            raise RuntimeError("Model not loaded. Call load_model() first.")
-        prediction = self.model.predict(processed_input)
-        return prediction
+        if self.model_type == "tflite":
+            if self.interpreter is None:
+                raise RuntimeError("TFLite model not loaded. Call load_model() first.")
+            
+            # Set input tensor
+            self.interpreter.set_tensor(self.input_details[0]['index'], processed_input)
+            
+            # Run inference
+            self.interpreter.invoke()
+            
+            # Get output tensor
+            prediction = self.interpreter.get_tensor(self.output_details[0]['index'])
+            return prediction
+            
+        elif self.model_type == "keras":
+            if self.model is None:
+                raise RuntimeError("Keras model not loaded. Call load_model() first.")
+            return self.model.predict(processed_input, verbose=0)
+        
+        else:
+            raise RuntimeError("No model loaded")
 
     def postprocess(self, raw_output: np.ndarray) -> Dict[str, Any]:
         """Convert the raw model output into API-friendly response (labels, probabilities)"""
@@ -67,12 +157,13 @@ class Predictor:
         return {
             "predicted_class": predicted_class,
             "confidence": confidence,
-            "class_probabilities": class_probabilities
+            "class_probabilities": class_probabilities,
+            "model_type": self.model_type  # Add model type to response
         }
 
     def predict_from_image(self, image: Image.Image) -> Dict[str, Any]:
         """Complete prediction pipeline with pre-validation."""
-        if self.model is None:
+        if self.model_type is None:
             raise RuntimeError("Model not loaded. Call load_model() first.")
         
         # PRE-VALIDATION STEP
@@ -85,7 +176,8 @@ class Predictor:
                 "confidence": 0.0,
                 "message": validation_result["reason"],
                 "validation_details": validation_result,
-                "suggestion": "Please upload a clear image of tomato plant leaves"
+                "suggestion": "Please upload a clear image of tomato plant leaves",
+                "model_type": self.model_type
             }
         
         # Continue with normal prediction if validation passes
@@ -161,5 +253,5 @@ class Predictor:
             "texture_score": texture_score
         }
 
-# Instantiate the Predictor
-prediction_service = Predictor(MODEL_PATH)
+# Instantiate the Predictor with TFLite model and Keras fallback
+prediction_service = Predictor(TFLITE_MODEL_PATH, KERAS_MODEL_PATH)
