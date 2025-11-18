@@ -26,6 +26,246 @@ class_names = [
     "Tomato___healthy"
 ]
 
+# Treatment recommendations for each disease
+disease_treatments = {
+    "Grey_leaf_spot_(fungi)": {
+        "disease_name": "Grey Leaf Spot (Fungal)",
+        "severity": "moderate",
+        "treatment": {
+            "immediate": [
+                "Remove affected leaves immediately",
+                "Improve air circulation around plants",
+                "Apply fungicide containing chlorothalonil or copper"
+            ],
+            "preventive": [
+                "Water at soil level, avoid wetting leaves",
+                "Space plants properly for airflow",
+                "Apply mulch to prevent soil splash",
+                "Rotate crops annually"
+            ],
+            "organic": [
+                "Use neem oil spray",
+                "Apply baking soda solution (1 tsp per quart water)",
+                "Use compost tea as foliar spray"
+            ]
+        },
+        "prognosis": "Good if caught early and treated promptly"
+    },
+    "Tomato___Bacterial_spot": {
+        "disease_name": "Bacterial Spot",
+        "severity": "high",
+        "treatment": {
+            "immediate": [
+                "Remove and destroy infected plant parts",
+                "Apply copper-based bactericide",
+                "Avoid overhead watering"
+            ],
+            "preventive": [
+                "Use disease-resistant varieties",
+                "Sanitize tools between plants",
+                "Improve drainage and air circulation",
+                "Avoid working with wet plants"
+            ],
+            "organic": [
+                "Use copper sulfate spray",
+                "Apply beneficial bacteria (Bacillus subtilis)",
+                "Maintain proper soil pH (6.0-6.8)"
+            ]
+        },
+        "prognosis": "Manageable with proper treatment, but can spread rapidly"
+    },
+    "Tomato___Early_blight": {
+        "disease_name": "Early Blight",
+        "severity": "moderate",
+        "treatment": {
+            "immediate": [
+                "Remove lower infected leaves",
+                "Apply fungicide (chlorothalonil, mancozeb)",
+                "Stake plants to improve air circulation"
+            ],
+            "preventive": [
+                "Mulch around plants to prevent soil splash",
+                "Water at base of plants",
+                "Prune lower branches",
+                "Practice crop rotation"
+            ],
+            "organic": [
+                "Use baking soda spray",
+                "Apply neem oil regularly",
+                "Use copper fungicide",
+                "Compost tea applications"
+            ]
+        },
+        "prognosis": "Very treatable when detected early"
+    },
+    "Tomato___Late_blight": {
+        "disease_name": "Late Blight",
+        "severity": "critical",
+        "treatment": {
+            "immediate": [
+                "Remove and destroy infected plants IMMEDIATELY",
+                "Apply systemic fungicide urgently",
+                "Isolate affected area"
+            ],
+            "preventive": [
+                "Monitor weather for cool, wet conditions",
+                "Use resistant varieties",
+                "Ensure excellent drainage",
+                "Avoid overhead irrigation"
+            ],
+            "organic": [
+                "Copper-based treatments (limited effectiveness)",
+                "Remove infected plants immediately",
+                "Focus on prevention rather than treatment"
+            ]
+        },
+        "prognosis": "Serious disease - can destroy entire crops quickly. Immediate action required."
+    },
+    "Tomato___Leaf_Mold": {
+        "disease_name": "Leaf Mold",
+        "severity": "moderate",
+        "treatment": {
+            "immediate": [
+                "Increase air circulation immediately",
+                "Reduce humidity around plants",
+                "Apply fungicide spray"
+            ],
+            "preventive": [
+                "Space plants properly",
+                "Use drip irrigation",
+                "Ensure good ventilation in greenhouses",
+                "Remove lower leaves regularly"
+            ],
+            "organic": [
+                "Use baking soda solution",
+                "Apply neem oil",
+                "Improve air circulation naturally",
+                "Use beneficial microorganisms"
+            ]
+        },
+        "prognosis": "Easily managed with proper environmental controls"
+    },
+    "Tomato___Septoria_leaf_spot": {
+        "disease_name": "Septoria Leaf Spot",
+        "severity": "moderate",
+        "treatment": {
+            "immediate": [
+                "Remove infected lower leaves",
+                "Apply fungicide containing chlorothalonil",
+                "Improve plant spacing"
+            ],
+            "preventive": [
+                "Mulch to prevent soil splash",
+                "Water at soil level only",
+                "Stake and prune plants properly",
+                "Practice crop rotation"
+            ],
+            "organic": [
+                "Neem oil applications",
+                "Copper fungicide spray",
+                "Baking soda solution",
+                "Remove debris regularly"
+            ]
+        },
+        "prognosis": "Good recovery with consistent treatment"
+    },
+    "Tomato___Spider_mites": {
+        "disease_name": "Spider Mites Infestation",
+        "severity": "moderate",
+        "treatment": {
+            "immediate": [
+                "Spray plants with water to dislodge mites",
+                "Apply miticide or insecticidal soap",
+                "Increase humidity around plants"
+            ],
+            "preventive": [
+                "Maintain adequate moisture levels",
+                "Introduce predatory mites",
+                "Avoid excessive nitrogen fertilization",
+                "Regular monitoring of leaf undersides"
+            ],
+            "organic": [
+                "Neem oil spray",
+                "Insecticidal soap solution",
+                "Introduce ladybugs or lacewings",
+                "Use reflective mulch"
+            ]
+        },
+        "prognosis": "Excellent with early detection and treatment"
+    },
+    "Tomato___Target_Spot": {
+        "disease_name": "Target Spot",
+        "severity": "moderate",
+        "treatment": {
+            "immediate": [
+                "Remove infected leaves",
+                "Apply fungicide treatment",
+                "Improve air circulation"
+            ],
+            "preventive": [
+                "Use drip irrigation",
+                "Mulch around plants",
+                "Proper plant spacing",
+                "Rotate crops annually"
+            ],
+            "organic": [
+                "Copper-based fungicide",
+                "Baking soda spray",
+                "Neem oil application",
+                "Compost tea foliar spray"
+            ]
+        },
+        "prognosis": "Good response to treatment when caught early"
+    },
+    "Tomato___Yellow_Leaf_Curl_Virus": {
+        "disease_name": "Yellow Leaf Curl Virus",
+        "severity": "critical",
+        "treatment": {
+            "immediate": [
+                "Remove infected plants immediately",
+                "Control whitefly vectors",
+                "Isolate healthy plants"
+            ],
+            "preventive": [
+                "Use virus-resistant varieties",
+                "Control whitefly populations",
+                "Use reflective mulch",
+                "Install fine mesh screens"
+            ],
+            "organic": [
+                "Yellow sticky traps for whiteflies",
+                "Neem oil for vector control",
+                "Remove weeds that harbor virus",
+                "Use companion planting"
+            ]
+        },
+        "prognosis": "No cure available - focus on prevention and vector control"
+    },
+    "Tomato___healthy": {
+        "disease_name": "Healthy Plant",
+        "severity": "none",
+        "treatment": {
+            "immediate": [
+                "Continue current care routine",
+                "Monitor regularly for early signs of disease"
+            ],
+            "preventive": [
+                "Maintain consistent watering",
+                "Ensure proper nutrition",
+                "Monitor for pests regularly",
+                "Practice good garden hygiene"
+            ],
+            "organic": [
+                "Continue organic practices",
+                "Use compost for soil health",
+                "Encourage beneficial insects",
+                "Regular soil testing"
+            ]
+        },
+        "prognosis": "Plant is healthy - maintain current practices"
+    }
+}
+
 class Predictor:
     """Predictor class for tomato plant disease classification using TFLite."""
     def __init__(self, tflite_model_path: str | pathlib.Path, keras_model_path: str | pathlib.Path = None):
@@ -141,60 +381,56 @@ class Predictor:
             raise RuntimeError("No model loaded")
 
     def postprocess(self, raw_output: np.ndarray) -> Dict[str, Any]:
-        """Convert the raw model output into API-friendly response (labels, probabilities)"""
+        """Convert the raw model output into API-friendly response with treatment recommendations."""
         # Get predicted class probabilities
         probabilities = raw_output[0]  # Remove batch dimension
         predicted_class_idx = np.argmax(probabilities)
         predicted_class = class_names[predicted_class_idx]
         confidence = float(probabilities[predicted_class_idx])
         
-        # Format all class probabilities
-        class_probabilities = {
-            class_names[i]: float(probabilities[i]) 
-            for i in range(len(class_names))
-        }
+        # Get treatment information
+        treatment_info = disease_treatments.get(predicted_class, {})
         
         return {
-            "predicted_class": predicted_class,
+            "disease": predicted_class,
             "confidence": confidence,
-            "class_probabilities": class_probabilities,
-            "model_type": self.model_type  # Add model type to response
+            "disease_info": treatment_info,
+            "model_type": self.model_type
         }
 
     def predict_from_image(self, image: Image.Image) -> Dict[str, Any]:
-        """Complete prediction pipeline with pre-validation."""
+        """Complete prediction pipeline with internal pre-validation."""
         if self.model_type is None:
             raise RuntimeError("Model not loaded. Call load_model() first.")
         
-        # PRE-VALIDATION STEP
+        # INTERNAL PRE-VALIDATION (not exposed in response)
         validation_result = self.validate_tomato_image(image)
         
         if not validation_result["is_valid"]:
+            logger.warning(f"Image validation failed: {validation_result['reason']}")
             return {
                 "success": False,
-                "predicted_class": "invalid_input",
-                "confidence": 0.0,
-                "message": validation_result["reason"],
-                "validation_details": validation_result,
-                "suggestion": "Please upload a clear image of tomato plant leaves",
-                "model_type": self.model_type
+                "message": "Please upload a clear image of tomato plant leaves",
+                "suggestion": "Ensure the image contains visible green plant material and clear leaf details"
             }
+        
+        # Log validation success (internal only)
+        logger.info(f"Image validation passed: {validation_result['reason']}")
         
         # Continue with normal prediction if validation passes
         processed_input = self.preprocess(image)
         raw_output = self.predict(processed_input)
         result = self.postprocess(raw_output)
         
-        # Add validation info to successful predictions
-        result["validation_passed"] = True
-        result["validation_details"] = validation_result
+        # Add success flag
+        result["success"] = True
         
         return result
     
     def validate_tomato_image(self, image: Image.Image) -> Dict[str, Any]:
         """
-        Pre-validation to check if image likely contains plant material
-        Returns: {"is_valid": bool, "reason": str, "confidence": float}
+        Internal validation to check if image likely contains plant material
+        Returns: {"is_valid": bool, "reason": str}
         """
         
         # Convert to numpy for analysis
@@ -216,8 +452,7 @@ class Predictor:
             if green_percentage < 0.15:  # Less than 15% green pixels
                 return {
                     "is_valid": False,
-                    "reason": f"Insufficient green content ({green_percentage:.1%}). Expected plant material.",
-                    "green_percentage": green_percentage
+                    "reason": f"Insufficient green content ({green_percentage:.1%}). Expected plant material."
                 }
         
         # 2. TEXTURE COMPLEXITY CHECK (leaves have complex textures)
@@ -232,8 +467,7 @@ class Predictor:
         if texture_score < 10:  # Very smooth/uniform image
             return {
                 "is_valid": False, 
-                "reason": f"Image too uniform (texture score: {texture_score:.1f}). Expected detailed leaf structure.",
-                "texture_score": texture_score
+                "reason": f"Image too uniform (texture score: {texture_score:.1f}). Expected detailed leaf structure."
             }
         
         # 3. SIZE AND ASPECT RATIO CHECK
@@ -241,16 +475,13 @@ class Predictor:
         if min(height, width) < 100:
             return {
                 "is_valid": False,
-                "reason": f"Image too small ({width}x{height}). Minimum 100x100 pixels required.",
-                "dimensions": (width, height)
+                "reason": f"Image too small ({width}x{height}). Minimum 100x100 pixels required."
             }
         
         # If all checks pass
         return {
             "is_valid": True,
-            "reason": "Image passes pre-validation checks",
-            "green_percentage": green_percentage if 'green_percentage' in locals() else 0,
-            "texture_score": texture_score
+            "reason": "Image passes pre-validation checks"
         }
 
 # Instantiate the Predictor with TFLite model and Keras fallback
