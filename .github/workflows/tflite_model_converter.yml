@@ -72,7 +72,7 @@ jobs:
         "
     
     - name: Upload model
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: tflite-model
         path: ${{ github.event.inputs.output_path || 'model/MultiBranchFusionNet-0.tflite' }}
