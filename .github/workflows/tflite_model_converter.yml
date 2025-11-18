@@ -1,0 +1,78 @@
+name: TFLite Model Converter
+
+on:
+  workflow_dispatch:
+    inputs:
+      model_path:
+        description: "Path to the input model file"
+        required: true
+        default: "model/MultiBranchFusionNet-0.keras"
+      output_path:
+        description: "Path to the saved TFLite model file"
+        required: true
+        default: "model/MultiBranchFusionNet-0.tflite"
+  push:
+    paths:
+      - "model/**"
+      - "src/tflite_converter.py"
+
+jobs:
+  convert-model:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    
+    - name: Install dependencies
+      run: pip install tensorflow
+    
+    - name: Convert model
+      run: |
+        python -c "
+        import sys
+        import os
+        sys.path.append('src')
+        from tflite_converter import convert_model_to_tflite
+        
+        keras_path = '${{ github.event.inputs.model_path || 'model/MultiBranchFusionNet-0.keras' }}'
+        tflite_path = '${{ github.event.inputs.output_path || 'model/MultiBranchFusionNet-0.tflite' }}'
+        
+        if not os.path.exists(keras_path):
+            print(f'Model not found: {keras_path}')
+            sys.exit(1)
+        
+        convert_model_to_tflite(keras_path, tflite_path)
+        "
+    
+    - name: Model info
+      run: |
+        python -c "
+        import tensorflow as tf
+        import os
+        
+        tflite_path = '${{ github.event.inputs.output_path || 'model/MultiBranchFusionNet-0.tflite' }}'
+        
+        interpreter = tf.lite.Interpreter(model_path=tflite_path)
+        interpreter.allocate_tensors()
+        
+        input_details = interpreter.get_input_details()
+        output_details = interpreter.get_output_details()
+        size_mb = os.path.getsize(tflite_path) / 1024 / 1024
+        
+        print(f'Model: {tflite_path}')
+        print(f'Size: {size_mb:.1f} MB')
+        print(f'Input: {input_details[0][\"shape\"].tolist()}')
+        print(f'Output: {output_details[0][\"shape\"].tolist()}')
+        "
+    
+    - name: Upload model
+      uses: actions/upload-artifact@v3
+      with:
+        name: tflite-model
+        path: ${{ github.event.inputs.output_path || 'model/MultiBranchFusionNet-0.tflite' }}
