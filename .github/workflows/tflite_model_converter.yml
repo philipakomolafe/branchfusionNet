@@ -34,13 +34,13 @@ jobs:
         pip install tensorflow==2.18.0
         pip install ai-edge-litert
     
-    - name: Convert model with proper data type handling
+    - name: Run TFLite converter
       run: |
         python -c "
         import sys
         import os
-        import tensorflow as tf
-        import numpy as np
+        sys.path.append('src')
+        from tflite_converter import convert_model_to_tflite
         
         keras_path = '${{ github.event.inputs.model_path || 'model/MultiBranchFusionNet-0.keras' }}'
         tflite_path = '${{ github.event.inputs.output_path || 'model/MultiBranchFusionNet-0.tflite' }}'
@@ -49,74 +49,14 @@ jobs:
             print(f'Model not found: {keras_path}')
             sys.exit(1)
         
-        try:
-            print(f'Loading model from: {keras_path}')
-            
-            # Set mixed precision policy to float32 before loading
-            tf.keras.mixed_precision.set_global_policy('float32')
-            
-            model = tf.keras.models.load_model(keras_path)
-            print('✅ Model loaded successfully')
-            
-            # Create converter
-            converter = tf.lite.TFLiteConverter.from_keras_model(model)
-            
-            # Force float32 types
-            converter.target_spec.supported_types = [tf.float32]
-            converter.inference_input_type = tf.float32
-            converter.inference_output_type = tf.float32
-            
-            # Representative dataset for better conversion (optional)
-            def representative_dataset():
-                for _ in range(100):
-                    # Create dummy data matching your model's input shape
-                    # Adjust shape based on your model's actual input
-                    dummy_input = tf.random.normal([1, 224, 224, 3], dtype=tf.float32)
-                    yield [dummy_input]
-            
-            converter.representative_dataset = representative_dataset
-            converter.optimizations = [tf.lite.Optimize.DEFAULT]
-            
-            print('Converting to TFLite...')
-            tflite_model = converter.convert()
-            
-            # Save the model
-            os.makedirs(os.path.dirname(tflite_path), exist_ok=True)
-            with open(tflite_path, 'wb') as f:
-                f.write(tflite_model)
-            
-            print(f'✅ TFLite model saved to {tflite_path}')
-            
-            # Show model info
-            try:
-                import ai_edge_litert.interpreter as litert_interpreter
-                interpreter = litert_interpreter.Interpreter(model_path=tflite_path)
-                print('Using LiteRT interpreter')
-            except ImportError:
-                import warnings
-                warnings.filterwarnings('ignore')
-                interpreter = tf.lite.Interpreter(model_path=tflite_path)
-                print('Using TensorFlow Lite interpreter')
-            
-            interpreter.allocate_tensors()
-            
-            input_details = interpreter.get_input_details()
-            output_details = interpreter.get_output_details()
-            size_mb = os.path.getsize(tflite_path) / 1024 / 1024
-            
-            print(f'✅ Conversion successful!')
-            print(f'Model: {tflite_path}')
-            print(f'Size: {size_mb:.1f} MB')
-            print(f'Input shape: {input_details[0][\"shape\"].tolist()}')
-            print(f'Input dtype: {input_details[0][\"dtype\"]}')
-            print(f'Output shape: {output_details[0][\"shape\"].tolist()}')
-            print(f'Output dtype: {output_details[0][\"dtype\"]}')
-            
-        except Exception as e:
-            print(f'❌ Conversion failed: {str(e)}')
-            import traceback
-            traceback.print_exc()
+        print(f'Starting conversion: {keras_path} -> {tflite_path}')
+        success = convert_model_to_tflite(keras_path, tflite_path)
+        
+        if not success:
+            print('❌ Conversion failed')
             sys.exit(1)
+        
+        print('🎉 Conversion completed successfully')
         "
     
     - name: Upload model
