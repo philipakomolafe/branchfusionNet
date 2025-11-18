@@ -51,25 +51,31 @@ jobs:
         
         try:
             print(f'Loading model from: {keras_path}')
+            
+            # Set mixed precision policy to float32 before loading
+            tf.keras.mixed_precision.set_global_policy('float32')
+            
             model = tf.keras.models.load_model(keras_path)
+            print('✅ Model loaded successfully')
             
-            # Convert model to float32 to avoid bf16 issues
-            print('Converting model to float32...')
-            for layer in model.layers:
-                if hasattr(layer, 'dtype'):
-                    layer.dtype = tf.float32
-            
-            # Create converter with explicit dtype policy
+            # Create converter
             converter = tf.lite.TFLiteConverter.from_keras_model(model)
             
-            # Set converter options to handle data types properly
+            # Force float32 types
             converter.target_spec.supported_types = [tf.float32]
             converter.inference_input_type = tf.float32
             converter.inference_output_type = tf.float32
             
-            # Disable experimental features that might cause issues
-            converter.experimental_new_converter = False
-            converter.experimental_new_quantizer = False
+            # Representative dataset for better conversion (optional)
+            def representative_dataset():
+                for _ in range(100):
+                    # Create dummy data matching your model's input shape
+                    # Adjust shape based on your model's actual input
+                    dummy_input = tf.random.normal([1, 224, 224, 3], dtype=tf.float32)
+                    yield [dummy_input]
+            
+            converter.representative_dataset = representative_dataset
+            converter.optimizations = [tf.lite.Optimize.DEFAULT]
             
             print('Converting to TFLite...')
             tflite_model = converter.convert()
@@ -81,17 +87,16 @@ jobs:
             
             print(f'✅ TFLite model saved to {tflite_path}')
             
-            # Show model info using LiteRT
+            # Show model info
             try:
                 import ai_edge_litert.interpreter as litert_interpreter
                 interpreter = litert_interpreter.Interpreter(model_path=tflite_path)
                 print('Using LiteRT interpreter')
             except ImportError:
-                # Fallback to TensorFlow Lite
                 import warnings
                 warnings.filterwarnings('ignore')
                 interpreter = tf.lite.Interpreter(model_path=tflite_path)
-                print('Using TensorFlow Lite interpreter (deprecated)')
+                print('Using TensorFlow Lite interpreter')
             
             interpreter.allocate_tensors()
             
