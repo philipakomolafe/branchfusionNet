@@ -38,14 +38,11 @@ async def predict_plant_disease(file: UploadFile = File(...)):
         if image.mode != "RGB":
             image = image.convert("RGB")
         
-        # Get prediction
+        # Get prediction - this now returns the clean response directly
         result = prediction_service.predict_from_image(image)
         
-        return {
-            "success": True,
-            "filename": file.filename,
-            "prediction": result
-        }
+        # Return the clean result directly (no nesting under "prediction")
+        return result
         
     except FileNotFoundError as e:
         logger.error(f"Model file not found: {e}")
@@ -65,7 +62,7 @@ def get_model_info():
         model_info = {
             "model_type": prediction_service.model_type,
             "model_path": str(prediction_service.tflite_model_path) if prediction_service.model_type == "tflite" else str(prediction_service.keras_model_path),
-            "available_classes": len(prediction_service.__class__.__dict__.get('class_names', [])),
+            "available_classes": 10,  # Fixed number since we know it's 10 classes
             "status": "loaded"
         }
         
