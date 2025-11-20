@@ -15,6 +15,7 @@ lib64/
 parts/
 sdist/
 var/
+*.json
 wheels/
 *.egg-info/
 .installed.cfg
@@ -22,6 +23,7 @@ wheels/
 MANIFEST
 
 # Virtual environments
+.env
 venv/
 env/
 ENV/
@@ -64,3 +66,8 @@ htmlcov/
 # Temporary files
 tmp/
 temp/
+
+# Files
+*.jpg
+test.py
+assistant_service.py

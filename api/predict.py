@@ -4,6 +4,7 @@ import io
 import logging
 from service.predict_service import prediction_service
 
+
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/predict_disease")
