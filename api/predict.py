@@ -1,8 +1,10 @@
-from fastapi import APIRouter, status, UploadFile, File, HTTPException
+from typing import Optional
+from fastapi import APIRouter, status, UploadFile, File, HTTPException, Query 
 from PIL import Image
 import io
 import logging
 from service.predict_service import prediction_service
+from service.assistant_service import agri_assistant
 
 
 logger = logging.getLogger(__name__)
@@ -18,7 +20,10 @@ def check_health():
     return {"status": "ok"}
 
 @router.post("/predict")
-async def predict_plant_disease(file: UploadFile = File(...)):
+async def predict_plant_disease(
+    file: UploadFile = File(...), 
+    include_advice: bool = Query(False), region: Optional[str] = Query(None, description="Farmer's region"), 
+    language: str = Query("en", description="Response language")):
     """Predict tomato plant disease from uploaded image."""
     try:
         # Validate file type
@@ -41,8 +46,15 @@ async def predict_plant_disease(file: UploadFile = File(...)):
         
         # Get prediction - this now returns the clean response directly
         result = prediction_service.predict_from_image(image)
-        
-        # Return the clean result directly (no nesting under "prediction")
+
+        # If advice is requested, get it from the AI assistant. 
+        if include_advice and result.get("success"):
+            disease = result.get("disease", "Unknown")
+            confidence = result.get("confidence", 0.0)
+            result["ai_advice"] = agri_assistant.get_advice(disease, confidence, region, language)
+
+
+        # Return the clean result directly.
         return result
         
     except FileNotFoundError as e:
@@ -53,6 +65,8 @@ async def predict_plant_disease(file: UploadFile = File(...)):
         logger.error(f"Prediction error: {e}")
         raise HTTPException(status_code=500, detail=f"Prediction failed: {str(e)}")
 
+
+
 @router.get("/model/info")
 def get_model_info():
     """Get information about the currently loaded model."""
@@ -62,18 +76,12 @@ def get_model_info():
         
         model_info = {
             "model_type": prediction_service.model_type,
-            "model_path": str(prediction_service.tflite_model_path) if prediction_service.model_type == "tflite" else str(prediction_service.keras_model_path),
             "available_classes": 10,  # Fixed number since we know it's 10 classes
-            "status": "loaded"
+            "status": "loaded",
+            "ai_assistant": "active" if agri_assistant.is_active() else "inactive"
         }
         
-        if prediction_service.model_type == "tflite" and prediction_service.input_details:
-            model_info.update({
-                "input_shape": prediction_service.input_details[0]['shape'].tolist(),
-                "output_shape": prediction_service.output_details[0]['shape'].tolist(),
-                "input_dtype": str(prediction_service.input_details[0]['dtype'])
-            })
-        
+
         return model_info
         
     except Exception as e:
