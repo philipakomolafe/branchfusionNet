@@ -391,8 +391,8 @@ class Predictor:
         # Get treatment information
         treatment_info = disease_treatments.get(predicted_class, {})
         
-        return {
-            "disease": predicted_class,
+        return { 
+            "disease": predicted_class.replace("Tomato___", "").replace("_", " ").title(),
             "confidence": confidence,
             # "disease_info": treatment_info,
             # "model_type": self.model_type

@@ -3,7 +3,7 @@ from fastapi import APIRouter, status, UploadFile, File, HTTPException, Query
 from PIL import Image
 import io
 import logging
-from service.predict_service import prediction_service
+from service.predict_service import prediction_service, disease_treatments
 from service.assistant_service import agri_assistant
 
 
@@ -54,9 +54,9 @@ async def predict_plant_disease(
 
             # Confirm active status of AI assistant
             if agri_assistant.is_active():
-                result["ai_advice"] = agri_assistant.get_advice(disease, confidence, region, language)
+                result["treatment"] = agri_assistant.get_advice(disease, confidence, region, language)
             else:
-                result["ai_advice"] = "AI assistant is not available."
+                result["treatment"] = disease_treatments.get(disease, {})
 
         # Return the clean result directly.
         return result
