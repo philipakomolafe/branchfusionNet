@@ -68,7 +68,7 @@ class AgriAssistant:
             return response.text.strip()
         except Exception as e:
             logger.error(f"Gemini generation error: {e}")
-            return "Could not generate advice at this time. Please try again later."
+            # return "Could not generate advice at this time. Please try again later."
 
 # Create Agricultural assistant instance
 agri_assistant = AgriAssistant()
