@@ -394,8 +394,8 @@ class Predictor:
         return {
             "disease": predicted_class,
             "confidence": confidence,
-            "disease_info": treatment_info,
-            "model_type": self.model_type
+            # "disease_info": treatment_info,
+            # "model_type": self.model_type
         }
 
     def predict_from_image(self, image: Image.Image) -> Dict[str, Any]:

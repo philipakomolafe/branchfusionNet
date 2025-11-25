@@ -51,8 +51,12 @@ async def predict_plant_disease(
         if include_advice and result.get("success"):
             disease = result.get("disease", "Unknown")
             confidence = result.get("confidence", 0.0)
-            result["ai_advice"] = agri_assistant.get_advice(disease, confidence, region, language)
 
+            # Confirm active status of AI assistant
+            if agri_assistant.is_active():
+                result["ai_advice"] = agri_assistant.get_advice(disease, confidence, region, language)
+            else:
+                result["ai_advice"] = "AI assistant is not available."
 
         # Return the clean result directly.
         return result
@@ -80,8 +84,6 @@ def get_model_info():
             "status": "loaded",
             "ai_assistant": "active" if agri_assistant.is_active() else "inactive"
         }
-        
-
         return model_info
         
     except Exception as e:

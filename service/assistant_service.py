@@ -24,7 +24,7 @@ class AgriAssistant:
         try:
             genai.configure(api_key=GEMINI_API_KEY)
             self.model = genai.GenerativeModel(model_name=MODEL_NAME)
-            logger.success("Gemini assistant initialized successfully.")
+            logger.info("Gemini assistant initialized successfully.")
 
         except Exception as e:
             logger.error(f"Failed to initialize Gemini assistant: {e}")
