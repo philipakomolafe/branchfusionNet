@@ -1,3 +1,206 @@
+# BranchFusionNet API (v1)
+
+BranchFusionNet provides tomato leaf disease detection using a TensorFlow Lite (TFLite) CNN model (10 classes) plus optional AI (Gemini) advisory output. You upload a leaf image and receive: diagnosis, confidence, structured treatment recommendations, and—if requested—concise AI advice.
+
+Base URL: `https://branchfusionnet.onrender.com`
+
+## Summary of Capabilities
+- Image-based disease classification (10 conditions + healthy)
+- Structured treatment guidance (immediate / preventive / organic / prognosis)
+- Optional AI advice (Gemini) via query flag
+- Lightweight TFLite inference (fast, low resource)
+
+## Authentication
+None required. All endpoints are public. Use responsibly.
+
+## Core Disease Classes
+`Grey_leaf_spot_(fungi)`, `Tomato___Bacterial_spot`, `Tomato___Early_blight`, `Tomato___Late_blight`, `Tomato___Leaf_Mold`, `Tomato___Septoria_leaf_spot`, `Tomato___Spider_mites`, `Tomato___Target_Spot`, `Tomato___Yellow_Leaf_Curl_Virus`, `Tomato___healthy`.
+
+## Endpoints Overview
+| Method | Path | Purpose |
+|--------|------|---------|
+| GET | `/predict_disease/` | Welcome ping |
+| GET | `/predict_disease/health` | Health check |
+| GET | `/predict_disease/model/info` | Model metadata + assistant availability |
+| POST | `/predict_disease/predict` | Main prediction endpoint |
+
+## Image Requirements
+- Format: JPG / JPEG / PNG
+- Minimum size: 100x100 px (larger recommended)
+- Content: Clear tomato leaf (avoid clutter, blur, harsh glare)
+- Lighting: Natural / even; avoid overexposure
+
+## Prediction Endpoint
+`POST /predict_disease/predict`
+
+### Request (multipart/form-data)
+Field: `file` (required) – image file.
+
+### Optional Query Parameters
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `include_advice` | bool | false | If true, attaches AI (Gemini) generated guidance. |
+| `region` | string | null | Regional context (e.g. `Nigeria`, `Kenya`). Improves advice relevance. |
+| `language` | string | `en` | Language for AI advice (if supported). |
+
+### Example cURL
+```bash
+curl -X POST "https://branchfusionnet.onrender.com/predict_disease/predict?include_advice=true&region=Nigeria&language=en" \
+  -H "accept: application/json" \
+  -H "Content-Type: multipart/form-data" \
+  -F "file=@/path/to/tomato_leaf.jpg"
+```
+
+### Example Python
+```python
+import requests
+
+url = "https://branchfusionnet.onrender.com/predict_disease/predict"
+params = {"include_advice": True, "region": "Nigeria", "language": "en"}
+files = {"file": ("leaf.jpg", open("leaf.jpg", "rb"), "image/jpeg")}
+res = requests.post(url, params=params, files=files)
+data = res.json()
+
+if data.get("success"):
+    print("Disease:", data["diagnosis"]["disease"])
+    print("Confidence:", f"{data['diagnosis']['confidence']:.2%}")
+    print("Immediate treatment:", data["treatment"].get("immediate", [])[:2])
+    if "ai_advice" in data and data["ai_advice"].get("available"):
+        print("AI Advice:\n", data["ai_advice"]["content"])
+else:
+    print("Error:", data.get("message"))
+```
+
+### Example JavaScript Fetch
+```javascript
+const form = new FormData();
+form.append('file', fileInput.files[0], 'leaf.jpg');
+
+fetch('https://branchfusionnet.onrender.com/predict_disease/predict?include_advice=true&region=Nigeria', {
+  method: 'POST',
+  body: form
+})
+  .then(r => r.json())
+  .then(d => {
+    if (d.success) {
+      console.log('Disease:', d.diagnosis.disease);
+      console.log('Confidence:', (d.diagnosis.confidence * 100).toFixed(1) + '%');
+      console.log('Immediate:', d.treatment.immediate);
+      if (d.ai_advice?.available) console.log('AI Advice:', d.ai_advice.content);
+    } else {
+      console.error('Error:', d.message);
+    }
+  });
+```
+
+## Response Schema (Successful Prediction)
+```json
+{
+  "success": true,
+  "diagnosis": {
+    "disease": "Tomato___Early_blight",
+    "confidence": 0.8945,
+    "severity": "moderate"
+  },
+  "treatment": {
+    "immediate": ["Remove lower infected leaves", "Apply fungicide (chlorothalonil, mancozeb)"],
+    "preventive": ["Mulch to prevent soil splash", "Water at base"],
+    "organic": ["Neem oil spray", "Baking soda solution"]
+  },
+  "prognosis": "Very treatable when detected early",
+  "model_type": "tflite",
+  "ai_advice": {
+    "available": true,
+    "content": "**🚨 Immediate Actions:**\n• Remove infected leaves...",
+    "format": "structured"
+  }
+}
+```
+
+### Healthy Example
+```json
+{
+  "success": true,
+  "diagnosis": {"disease": "Tomato___healthy", "confidence": 0.9234, "severity": "none"},
+  "treatment": {"immediate": ["Continue current care"], "preventive": ["Consistent watering"], "organic": []},
+  "prognosis": "Plant is healthy - maintain current practices",
+  "model_type": "tflite"
+}
+```
+
+### Validation Failure Example
+```json
+{
+  "success": false,
+  "message": "Please upload a clear image of tomato plant leaves",
+  "suggestion": "Ensure the image contains visible green plant material and clear leaf details"
+}
+```
+
+## Error Codes
+| Code | Meaning | Typical Cause |
+|------|---------|---------------|
+| 200 | OK | Successful prediction |
+| 400 | Bad Request | Non-image file / missing file field |
+| 404 | Not Found | Wrong endpoint path |
+| 500 | Server Error | Internal inference / model load failure |
+
+## Model Info Endpoint
+`GET /predict_disease/model/info`
+Returns: model type, path, class count, AI assistant availability.
+
+Sample:
+```json
+{
+  "model_type": "tflite",
+  "model_path": "model/MultiBranchFusionNet-0.tflite",
+  "available_classes": 10,
+  "status": "loaded",
+  "ai_assistant": "active"
+}
+```
+
+## AI Advice Notes
+- Only returned if `include_advice=true` and Gemini API key configured.
+- Structured under `ai_advice` with `available`, `content`, `format`.
+- If unavailable: omitted or `{ "available": false, "message": "..." }`.
+
+## Quick Health Script (Batch Folder Scan)
+```python
+import os, requests
+
+API = "https://branchfusionnet.onrender.com/predict_disease/predict"
+
+def scan(folder):
+    for f in os.listdir(folder):
+        if f.lower().endswith((".jpg", ".jpeg", ".png")):
+            path = os.path.join(folder, f)
+            with open(path, 'rb') as img:
+                r = requests.post(API, files={"file": (f, img, "image/jpeg")})
+                j = r.json()
+                if j.get("success"):
+                    d = j["diagnosis"]["disease"]
+                    conf = j["diagnosis"]["confidence"]
+                    print(f"{f}: {d} ({conf:.1%})")
+                else:
+                    print(f"{f}: ERROR - {j.get('message')}")
+
+scan("./samples")
+```
+
+## Rate Limits
+No formal rate limiting presently. Please avoid excessive automated polling.
+
+## Disclaimer
+Agronomic output is informational; verify before applying chemical or large-scale interventions. We assume no liability for misuse or decisions made solely on API output.
+
+## Changelog
+- v1.0: Initial TFLite prediction service
+- v1.1: Added structured treatment recommendations
+- v1.2: Added optional Gemini AI advisory (`include_advice` param)
+
+---
+For issues: open a GitHub issue or inspect server logs for stack traces.
 # BranchFusionNet API v1
 
 BranchFusionNet is a machine learning-based service specifically designed to identify and diagnose tomato plant diseases from leaf images. The API uses a TensorFlow Lite deep learning model trained on 10 distinct disease classes to provide accurate disease classification with confidence scores and expert treatment recommendations.
