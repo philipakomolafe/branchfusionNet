@@ -64,7 +64,9 @@ class AgriAssistant:
             prompt += f"\nProvide the advice in {language}."
 
         try:
-            response = self.model.generate_content(prompt)
+            response = self.model.generate_content(prompt, generation_config=genai.GenerationConfig(
+                temperature=0.4, max_output_tokens=800,
+            ))
             return response.text.strip()
         except Exception as e:
             logger.error(f"Gemini generation error: {e}")

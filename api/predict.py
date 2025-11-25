@@ -55,8 +55,11 @@ async def predict_plant_disease(
             # Confirm active status of AI assistant
             if agri_assistant.is_active():
                 result["treatment"] = agri_assistant.get_advice(disease, confidence, region, language)
+                result["disease"] = disease.replace("Tomato___", "").replace("_", " ")
             else:
                 result["treatment"] = disease_treatments.get(disease, {})
+                result["disease"] = disease.replace("Tomato___", "").replace("_", " ")
+
 
         # Return the clean result directly.
         return result
