@@ -1,0 +1,29 @@
+name: Ping API endpoint
+
+# When to run this workflow.
+on: 
+  # Run every 5 minutes
+  schedule:
+    - cron: "*/5 * * * *"
+
+  # Allow manual triggering from github UI
+  workflow_dispatch:
+
+
+jobs: 
+  ping-endpoint:
+    runs-on: ubuntu-latest
+
+    steps:
+        # Step 1: ping health endpoint
+        - name: Ping Health Endpoint
+          run: |
+            curl -X GET "https://branchfusionnet.onrender.com/predict_disease/health" \
+              -H "Accept: application/json" \
+              --max-time 20 \
+              --retry 3 \
+              --retry-delay 5
+
+        # Step 2: log success message
+        - name: Log Success Message
+          run: echo "API endpoint pinged successfully."
