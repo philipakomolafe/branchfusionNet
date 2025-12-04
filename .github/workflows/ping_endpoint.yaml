@@ -2,9 +2,9 @@ name: Ping API endpoint
 
 # When to run this workflow.
 on: 
-  # Run every 5 minutes
+  # Run every 8 minutes
   schedule:
-    - cron: "*/5 * * * *"
+    - cron: "*/8 * * * *"
 
   # Allow manual triggering from github UI
   workflow_dispatch:
