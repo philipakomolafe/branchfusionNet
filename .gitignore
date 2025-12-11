@@ -70,3 +70,4 @@ temp/
 # Files
 *.jpg
 test.py
+download_images.py
