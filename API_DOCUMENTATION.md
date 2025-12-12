@@ -1,8 +1,21 @@
-# BranchFusionNet API
+# BranchFusionNet API Documentation
 
 Tomato plant disease detection API using a TensorFlow Lite model with optional AI-powered treatment advice.
 
 **Base URL:** `https://branchfusionnet.onrender.com`
+
+**Version:** 2.0
+
+**Last Updated:** December 12, 2025
+
+---
+
+## Overview
+
+This API provides tomato plant disease detection from leaf images. It uses a two-stage validation process:
+
+1. **Tomato Validation** - Verifies the uploaded image contains a tomato plant
+2. **Disease Classification** - Identifies the specific disease (if any) from 10 possible classes
 
 ---
 
@@ -10,7 +23,7 @@ Tomato plant disease detection API using a TensorFlow Lite model with optional A
 
 ### GET `/predict_disease/`
 
-Welcome message.
+Welcome endpoint to verify API is running.
 
 **Response:**
 ```json
@@ -23,7 +36,7 @@ Welcome message.
 
 ### GET `/predict_disease/health`
 
-Health check.
+Health check endpoint for monitoring and keep-alive pings.
 
 **Response:**
 ```json
@@ -36,7 +49,7 @@ Health check.
 
 ### GET `/predict_disease/model/info`
 
-Get model information.
+Get information about the loaded model and AI assistant status.
 
 **Response:**
 ```json
@@ -48,22 +61,127 @@ Get model information.
 }
 ```
 
+| Field | Type | Description |
+|-------|------|-------------|
+| `model_type` | string | Model format: `"tflite"` or `"keras"` |
+| `available_classes` | integer | Number of disease classes (always 10) |
+| `status` | string | Model load status: `"loaded"` |
+| `ai_assistant` | string | AI assistant status: `"active"` or `"inactive"` |
+
 ---
 
 ### POST `/predict_disease/predict`
 
-Predict tomato plant disease from uploaded image.
-
-**Request:**
-- Content-Type: `multipart/form-data`
-- Body: `file` (required) - image file
+Main prediction endpoint. Accepts an image and returns disease diagnosis.
 
 **Query Parameters:**
+
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `include_advice` | bool | `false` | Include AI-generated treatment advice |
-| `region` | string | `null` | Farmer's region for tailored advice |
-| `language` | string | `"en"` | Response language |
+| `include_advice` | boolean | `false` | Include AI-generated treatment advice |
+| `region` | string | `null` | Farmer's region for localized advice (e.g., `"Nigeria"`) |
+| `language` | string | `"en"` | Response language code (e.g., `"en"`, `"fr"`, `"sw"`) |
+
+**Request:**
+- **Content-Type:** `multipart/form-data`
+- **Body:** `file` - Image file (JPEG, PNG, etc.)
+
+---
+
+## Response Formats
+
+The API returns **two different response structures** depending on the validation outcome:
+
+### Response Type 1: Validation Failed
+
+Returned when the image fails validation (not a tomato plant, poor quality, etc.)
+
+```json
+{
+  "success": false,
+  "message": "This does not appear to be a tomato plant image (85.3% confidence).",
+  "suggestion": "Please upload a clear image of tomato plant leaves for disease detection."
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `success` | boolean | Always `false` for validation failures |
+| `message` | string | Human-readable explanation with confidence score |
+| `suggestion` | string | Actionable guidance for the user |
+
+**Validation Failure Scenarios:**
+
+| Scenario | Example Message |
+|----------|-----------------|
+| Not a tomato plant | `"This does not appear to be a tomato plant image (85.3% confidence)."` |
+| Image too small | `"Image too small (50x50). Minimum 100x100 pixels required."` |
+| Insufficient plant material | `"Image lacks sufficient green plant material (5.2%)."` |
+
+---
+
+### Response Type 2: Prediction Success (without advice)
+
+Returned when `include_advice=false` (default), `region=null`, `language=en` and validation passes.
+
+```json
+{
+  "success": true,
+  "confidence": 0.93,
+  "disease": "Healthy Plant",
+  "treatment": "Ensure current care routine is maintained",
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `success` | boolean | Always `true` for successful predictions |
+| `confidence` | float | Model prediction confidence score |
+| `disease` | string | Disease name |
+| `treatment` | string | Structured treatment advice |
+
+**Note:** If AI assistant is inactive, `treatment` will contain a simple advice instead of AI-generated text.
+
+---
+
+### Response Type 3: Prediction Success (with advice)
+
+Returned when `include_advice=true` and validation passes.
+
+```json
+{
+  "disease": "Healthy Plant",
+  "confidence": 1.0,
+  "success": true,
+  "treatment": "Here are 3 brief tips to maintain your tomato plant's health, tailored for Akure's climate:\n\n1.  **Mindful Watering:** During Akure's dry season, water deeply and consistently. In the rainy season, ensure excellent drainage to prevent waterlogging and root rot from heavy downpours.\n2.  **Vigilant Disease Control:** Akure's high humidity creates ideal conditions for fungal diseases (like blight) and various pests. Inspect plants daily for early signs and treat promptly to prevent widespread issues.\n3.  **Nutrient Replenishment & Airflow:** Heavy rains can leach soil nutrients, so regularly feed your plant with a balanced fertilizer. Prune lower leaves and suckers to improve air circulation, crucial for reducing disease risk in humid Akure conditions."
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `success` | boolean | Always `true` for successful predictions |
+| `disease` | string | Clean disease name (spaces instead of underscores) |
+| `confidence` | float | Prediction confidence (0.0 to 1.0) |
+| `treatment` | string | AI-generated detailed treatment advice |
+
+---
+
+---
+
+## Supported Disease Classes
+
+| Class ID | Disease Name | Severity |
+|----------|--------------|----------|
+| 0 | Grey Leaf Spot (Fungal) | Moderate |
+| 1 | Bacterial Spot | High |
+| 2 | Early Blight | Moderate |
+| 3 | Late Blight | Critical |
+| 4 | Leaf Mold | Moderate |
+| 5 | Septoria Leaf Spot | Moderate |
+| 6 | Spider Mites Infestation | Moderate |
+| 7 | Target Spot | Moderate |
+| 8 | Yellow Leaf Curl Virus | Critical |
+| 9 | Healthy Plant | None |
 
 ---
 
@@ -71,14 +189,17 @@ Predict tomato plant disease from uploaded image.
 
 ### cURL
 
+**Basic prediction:**
 ```bash
 curl -X POST "https://branchfusionnet.onrender.com/predict_disease/predict" \
+  -H "Content-Type: multipart/form-data" \
   -F "file=@tomato_leaf.jpg"
 ```
 
-With AI advice:
+**With AI advice:**
 ```bash
 curl -X POST "https://branchfusionnet.onrender.com/predict_disease/predict?include_advice=true&region=Nigeria&language=en" \
+  -H "Content-Type: multipart/form-data" \
   -F "file=@tomato_leaf.jpg"
 ```
 
@@ -88,136 +209,101 @@ curl -X POST "https://branchfusionnet.onrender.com/predict_disease/predict?inclu
 import requests
 
 url = "https://branchfusionnet.onrender.com/predict_disease/predict"
-files = {"file": ("leaf.jpg", open("leaf.jpg", "rb"), "image/jpeg")}
-params = {"include_advice": True, "region": "Nigeria", "language": "en"}
 
-response = requests.post(url, files=files, params=params)
-result = response.json()
+# Basic prediction
+with open("tomato_leaf.jpg", "rb") as f:
+    response = requests.post(url, files={"file": f})
+    result = response.json()
+
+if result["success"]:
+    print(result["disease"])
+else:
+    print(f"Error: {result['message']}")
+    print(f"Suggestions: {result['suggestion']}")
+```
+
+```python
+# With AI advice
+params = {
+    "include_advice": True,
+    "region": "Nigeria",
+    "language": "en"
+}
+
+with open("tomato_leaf.jpg", "rb") as f:
+    response = requests.post(url, files={"file": f}, params=params)
+    result = response.json()
 
 if result["success"]:
     print(f"Disease: {result['disease']}")
-    print(f"Confidence: {result['confidence']:.2%}")
-    if "treatment" in result:
-        print(f"Treatment: {result['treatment']}")
-else:
-    print(f"Error: {result['message']}")
+    print(f"Confidence: {result['confidence']:.1%}")
+    print(f"Treatment:\n{result['treatment']}")
+
+else: 
+    print(f"Success: {result["success"]}")
+    print(f"Message: {result["message"]}")
+    print(f"Suggestions: {result["suggestion"]})
 ```
 
-### JavaScript
+### JavaScript (Fetch)
 
 ```javascript
 const formData = new FormData();
-formData.append('file', fileInput.files[0]);
+formData.append("file", fileInput.files[0]);
 
-fetch('https://branchfusionnet.onrender.com/predict_disease/predict?include_advice=true&region=Nigeria', {
-  method: 'POST',
+// Basic prediction
+fetch("https://branchfusionnet.onrender.com/predict_disease/predict", {
+  method: "POST",
   body: formData
 })
-.then(r => r.json())
+.then(res => res.json())
 .then(data => {
   if (data.success) {
-    console.log('Disease:', data.disease);
-    console.log('Confidence:', data.confidence);
-    if (data.treatment) console.log('Treatment:', data.treatment);
+    console.log(data.disease);
+    console.log("Treatment:", data.treatment);
   } else {
-    console.error('Error:', data.message);
+    console.error(data.message);
+    console.log("Suggestion:", data.suggestion);
+  }
+});
+```
+
+```javascript
+// With AI advice
+const params = new URLSearchParams({
+  include_advice: true,
+  region: "Nigeria",
+  language: "en"
+});
+
+fetch(`https://branchfusionnet.onrender.com/predict_disease/predict?${params}`, {
+  method: "POST",
+  body: formData
+})
+.then(res => res.json())
+.then(data => {
+  if (data.success) {
+    console.log("Disease:", data.disease);
+    console.log("Confidence:", (data.confidence * 100).toFixed(1) + "%");
+    console.log("Treatment:", data.treatment);
   }
 });
 ```
 
 ---
 
-## Response Examples
-
-### Successful Prediction (without `include_advice`)
-
-```json
-{
-  "success": true,
-  "disease": "Tomato___Early_blight",
-  "confidence": 0.8945
-}
-```
-
-### Successful Prediction (with `include_advice=true`, AI active)
-
-```json
-{
-  "success": true,
-  "disease": "Early blight",
-  "confidence": 0.8945,
-  "treatment": "1. Immediate Action: Remove infected leaves...\n2. Organic Solution: Apply neem oil...\n3. Prevention: Practice crop rotation..."
-}
-```
-
-### Successful Prediction (with `include_advice=true`, AI inactive)
-
-Falls back to predefined treatment data:
-
-```json
-{
-  "success": true,
-  "disease": "Early blight",
-  "confidence": 0.8945,
-  "treatment": {
-    "disease_name": "Early Blight",
-    "severity": "moderate",
-    "treatment": {
-      "immediate": [
-        "Remove lower infected leaves",
-        "Apply fungicide (chlorothalonil, mancozeb)",
-        "Stake plants to improve air circulation"
-      ],
-      "preventive": [
-        "Mulch around plants to prevent soil splash",
-        "Water at base of plants",
-        "Prune lower branches",
-        "Practice crop rotation"
-      ],
-      "organic": [
-        "Use baking soda spray",
-        "Apply neem oil regularly",
-        "Use copper fungicide",
-        "Compost tea applications"
-      ]
-    },
-    "prognosis": "Very treatable when detected early"
-  }
-}
-```
-
-### Healthy Plant
-
-```json
-{
-  "success": true,
-  "disease": "Tomato___healthy",
-  "confidence": 0.9234
-}
-```
-
-### Failed Validation
-
-```json
-{
-  "success": false,
-  "message": "Please upload a clear image of tomato plant leaves",
-  "suggestion": "Ensure the image contains visible green plant material and clear leaf details"
-}
-```
-
----
-
 ## Error Responses
 
-### 400 Bad Request
+### HTTP 400 - Bad Request
+
 ```json
 {
   "detail": "File must be an image"
 }
 ```
 
-### 500 Internal Server Error
+### HTTP 500 - Server Error
+
 ```json
 {
   "detail": "Model file not found. Please ensure the model is available."
@@ -226,39 +312,90 @@ Falls back to predefined treatment data:
 
 ```json
 {
-  "detail": "Prediction failed: [error details]"
+  "detail": "Prediction failed: <error message>"
 }
 ```
 
 ---
 
-## Supported Disease Classes
+## Response Decision Tree
 
-1. `Grey_leaf_spot_(fungi)`
-2. `Tomato___Bacterial_spot`
-3. `Tomato___Early_blight`
-4. `Tomato___Late_blight`
-5. `Tomato___Leaf_Mold`
-6. `Tomato___Septoria_leaf_spot`
-7. `Tomato___Spider_mites`
-8. `Tomato___Target_Spot`
-9. `Tomato___Yellow_Leaf_Curl_Virus`
-10. `Tomato___healthy`
+```
+Upload Image
+    │
+    ▼
+┌─────────────────┐
+│ Is Tomato Plant?│
+└────────┬────────┘
+         │
+    ┌────┴────┐
+    │         │
+   No        Yes
+    │         │
+    ▼         ▼
+┌────────┐  ┌─────────────┐
+│ FAIL   │  │ Quality OK? │
+│Response│  └──────┬──────┘
+└────────┘         │
+              ┌────┴────┐
+              │         │
+             No        Yes
+              │         │
+              ▼         ▼
+         ┌────────┐  ┌─────────────┐
+         │ FAIL   │  │ Predict     │
+         │Response│  │ Disease     │
+         └────────┘  └──────┬──────┘
+                            │
+                    ┌───────┴───────┐
+                    │               │
+              include_advice   include_advice
+                 =false           =true
+                    │               │
+                    ▼               ▼
+              ┌──────────┐   ┌──────────────┐
+              │ SUCCESS  │   │ SUCCESS      │
+              │ (3 fields)│   │ (6 fields)  │
+              └──────────┘   └──────────────┘
+```
 
 ---
 
-## Image Requirements
+## Best Practices
 
-- Format: JPG, JPEG, PNG
-- Minimum size: 100x100 pixels
-- Content: Clear tomato plant leaves
-- Must contain visible green plant material
+1. **Image Quality**
+   - Use well-lit images of tomato leaves
+   - Minimum resolution: 100x100 pixels
+   - Ensure leaves are clearly visible and in focus
+
+2. **AI Advice**
+   - Enable `include_advice=true` for detailed treatment plans
+   - Specify `region` for localized recommendations
+   - AI advice requires `GEMINI_API_KEY` to be configured
+
+3. **Error Handling**
+   - Always check the `success` field first
+   - Display `message` to end users
+   - Use `suggestion` to guide user actions
+
+4. **Rate Limiting**
+   - No strict rate limits currently enforced
+   - Recommended: Max 60 requests/minute for AI advice
 
 ---
 
-## Notes
+## Changelog
 
-- When `include_advice=true` and AI assistant is active, `treatment` contains AI-generated text advice.
-- When `include_advice=true` but AI assistant is inactive, `treatment` contains predefined structured treatment data.
-- Without `include_advice`, response only contains `disease` and `confidence`.
-- Disease name is cleaned (removes `Tomato___` prefix) when `include_advice=true`.
+| Version | Date | Changes |
+|---------|------|---------|
+| 2.0 | Dec 12, 2025 | Added tomato validation, simplified response format |
+| 1.5 | Dec 10, 2025 | Added Gemini AI assistant integration |
+| 1.0 | Dec 1, 2025 | Initial release with TFLite model |
+
+---
+
+
+
+---
+
+*This API is for educational and agricultural assistance purposes. Always consult agricultural experts for critical decisions.*

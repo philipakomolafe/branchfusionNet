@@ -3,7 +3,7 @@ from fastapi import APIRouter, status, UploadFile, File, HTTPException, Query
 from PIL import Image
 import io
 import logging
-from service.predict_service import prediction_service, disease_treatments
+from service.predict_service import prediction_service, disease_treatments, disease_display_names
 from service.assistant_service import agri_assistant
 
 
@@ -51,14 +51,15 @@ async def predict_plant_disease(
         if include_advice and result.get("success"):
             disease = result.get("disease", "Unknown")
             confidence = result.get("confidence", 0.0)
+            result["disease"] = disease_display_names.get(disease, {}) # Adjust the name of disease to suits the display names.
 
             # Confirm active status of AI assistant
             if agri_assistant.is_active():
-                result["treatment"] = agri_assistant.get_advice(disease, confidence, region, language)
-                result["disease"] = disease.replace("Tomato___", "").replace("_", " ")
-            else:
-                result["treatment"] = disease_treatments.get(disease, {})
-                result["disease"] = disease.replace("Tomato___", "").replace("_", " ")
+                result["treatment"] = agri_assistant.get_advice(result['disease'], confidence, region, language)
+                
+        elif result.get('success'):
+            result["treatment"] = disease_treatments.get(disease, {})
+            result["disease"] = disease_display_names.get(disease, {}) # Adjust the name of disease to suits the display names.
 
 
         # Return the clean result directly.
