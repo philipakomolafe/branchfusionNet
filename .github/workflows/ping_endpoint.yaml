@@ -20,7 +20,7 @@ jobs:
           run: |
             curl -X GET "https://branchfusionnet.onrender.com/predict_disease/health" \
               -H "Accept: application/json" \
-              --max-time 20 \
+              --max-time 60 \
               --retry 3 \
               --retry-delay 5
 
