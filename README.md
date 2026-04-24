@@ -163,7 +163,3 @@ Notes when embedding:
 
 ## License
 See the `LICENSE` file in the repository root.
-
----
-
-If you want, I can also open a small patch to fix the `disease` variable bug in `api/predict.py` and the healthy-check in `service/assistant_service.py`.
