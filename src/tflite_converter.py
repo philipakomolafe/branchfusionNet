@@ -51,12 +51,14 @@ def convert_model_to_tflite(keras_model_path: str, tflite_model_path: str) -> bo
         tflite_model = converter.convert()
         
         # Create output directory if it doesn't exist
-        output_dir = os.path.dirname(tflite_model_path)
+        output_dir: str = os.path.dirname(tflite_model_path)
         if output_dir and not os.path.exists(output_dir):
+            # if the directory doesn't exist, then create it.
             os.makedirs(output_dir)
         
         # Save the TFLite model to the specified path
         with open(tflite_model_path, 'wb') as f:
+            # i.e write the converted TFLite model to the file path proivded in binary mode.
             f.write(tflite_model)
         
         print(f"✅ TFLite model saved to {tflite_model_path}")

@@ -27,5 +27,5 @@ services:
     scaling:
       minInstances: 1
       maxInstances: 3
-    region: singapore  # Choo`se: singapore
+    region: singapore  # Choose: singapore
     

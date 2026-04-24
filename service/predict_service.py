@@ -5,7 +5,6 @@ import numpy as np
 from PIL import Image
 import tensorflow as tf
 import cv2
-from collections import Counter
 import warnings
 
 logger = logging.getLogger(__name__)

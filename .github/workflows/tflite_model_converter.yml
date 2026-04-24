@@ -46,7 +46,7 @@ jobs:
         tflite_path = '${{ github.event.inputs.output_path || 'model/MultiBranchFusionNet-0.tflite' }}'
         
         if not os.path.exists(keras_path):
-            print(f'Model not found: {keras_path}')
+            print(f'keras model not found: {keras_path}')
             sys.exit(1)
         
         print(f'Starting conversion: {keras_path} -> {tflite_path}')

@@ -39,11 +39,9 @@ class AgriAssistant:
             logger.warning("AI assistant called but not active")
             return "AI assistant is currently unavailable. Please check API key configuration."
         
-        # # Clean disease name for prompt
-        # disease_name = disease.replace("Tomato___", "").replace("_", " ")
-
+       
         # Construct prompt
-        if "Healthy Plant" in disease.lower():
+        if "healthy plant" in disease.lower():
             prompt = (
                 f"A tomato plant is healthy (confidence: {confidence:.1%}). "
                 f"Give 3 brief tips to maintain this plant's health."
