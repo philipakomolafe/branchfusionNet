@@ -119,7 +119,7 @@ Successful response (typical):
 
 ```json
 {
-  "disease": "Tomato___Early_blight",
+  "disease": "Early blight",
   "confidence": 0.937,
   "treatment": "Remove lower infected leaves, apply fungicide, and mulch around plants.",
   "success": true
