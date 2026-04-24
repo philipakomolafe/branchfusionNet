@@ -46,20 +46,20 @@ async def predict_plant_disease(
         
         # Get prediction - this now returns the clean response directly
         result = prediction_service.predict_from_image(image)
+        
+        # fetch disease and confidence for advice generation.
+        disease = result.get("disease", "Unknown")
+        confidence = result.get("confidence", 0.0)
 
         # If advice is requested, get it from the AI assistant. 
         if include_advice and result.get("success"):
-            disease = result.get("disease", "Unknown")
-            confidence = result.get("confidence", 0.0)
-            result["disease"] = disease_display_names.get(disease, {}) # Adjust the name of disease to suits the display names.
-
-            # Confirm active status of AI assistant
+            result["disease"] = disease_display_names.get(disease, disease)
             if agri_assistant.is_active():
-                result["treatment"] = agri_assistant.get_advice(result['disease'], confidence, region, language)
+                result["treatment"] = agri_assistant.get_advice(disease, confidence, region, language)
                 
-        elif result.get('success'):
-            result["treatment"] = disease_treatments.get(disease, {})
-            result["disease"] = disease_display_names.get(disease, {}) # Adjust the name of disease to suits the display names.
+        else:
+            result["treatment"] = disease_treatments.get(disease, "")
+            result["disease"] = disease_display_names.get(disease, disease)
 
 
         # Return the clean result directly.

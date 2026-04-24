@@ -150,23 +150,6 @@ Notes when embedding:
 - `Predictor.load_model()` is idempotent — it will load TFLite first and fallback to Keras if needed.
 
 ## Known issues & recommended fixes
-- Bug: in `api/predict.py` the variable `disease` is referenced in the `elif` branch even when `include_advice` is `False`. This will raise `NameError`. Fix by extracting `disease` and `confidence` before the conditional:
-
-```python
-# top of endpoint, after getting `result`
-disease = result.get("disease", "Unknown")
-confidence = result.get("confidence", 0.0)
-
-if include_advice and result.get("success"):
-    # use disease/confidence
-    ...
-else:
-    # use disease/confidence
-    ...
-```
-
-- Bug: in `service/assistant_service.py` the healthy-check uses `if "Healthy Plant" in disease.lower():` which will never match because `disease.lower()` is lowercase. Use `if "healthy plant" in disease.lower():` or perform the check on the original-case string.
-
 - Conversion and TF issues: The converter script takes multiple conversion attempts; if conversion fails, check your TensorFlow version and available RAM. Consider running conversion on a machine with more memory or using remote/cloud conversion.
 
 ## Troubleshooting
