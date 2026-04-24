@@ -155,7 +155,7 @@ Notes when embedding:
 ## Troubleshooting
 - 400: non-image file upload — ensure `Content-Type` is an image and pass a valid image file
 - 500: "Model file not found" — ensure `model/` contains the required files and correct filenames
-- If AI assistant returns errors, confirm `GEMINI_API_KEY` and `MODEL_NAME` are set and that `google.generativeai` is installed
+- If AI assistant returns errors, confirm `GEMINI_API_KEY` and `MODEL_NAME` are set and that `google.genai` (or a compatible GenAI client) is installed
 
 ## Contributing / Extending
 - To add new classes, retrain a model and adjust `class_names` in `service/predict_service.py`.

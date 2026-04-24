@@ -11,9 +11,6 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/predict_disease")
 
-@router.get("/")
-def home():
-    return {"message": "Welcome to the Tomato Plant Disease API service"}
 
 @router.get("/health", status_code=status.HTTP_200_OK)
 def check_health():

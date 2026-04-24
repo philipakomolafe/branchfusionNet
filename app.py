@@ -16,6 +16,11 @@ async def startup_event():
     """Load the ML model on startup"""
     prediction_service.load_model()
 
+@app.get("/")
+def home():
+    return {"message": "Welcome to the Tomato Plant Disease API service"}
+
+
 app.include_router(router, tags=["Prediction"])
 
 if __name__ == "__main__":

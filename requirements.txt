@@ -7,4 +7,4 @@ numpy
 opencv-python
 scikit-learn
 ai-edge-litert
-google-generativeai
+google-genai
