@@ -1,202 +1,45 @@
-import os
-import logging
-from typing import Optional
-from dotenv import load_dotenv
-
-load_dotenv()
-
-logger = logging.getLogger(__name__)
-
-# Configure Gemini
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-MODEL_NAME = os.getenv("MODEL_NAME")
-
-# Prefer the new `google.genai` package, fall back to deprecated `google.generativeai` if needed
-genai_pkg = None
-try:
-    import google.genai as genai_pkg
-    logger.info("Using google.genai package for AI assistant")
-except Exception:
-    try:
-        import google.generativeai as genai_pkg
-        logger.warning("Using deprecated google.generativeai package; please migrate to google.genai")
-    except Exception:
-        genai_pkg = None
-
-
-class AgriAssistant:
-    """Agricultural AI assistant (supports google.genai and google.generativeai)."""
-
-    def __init__(self):
-        if not GEMINI_API_KEY:
-            logger.warning("GEMINI_API_KEY environment variable not set. AI assistant will be disabled.")
-            self.client = None
-            self.model = None
-            return
-
-        self.client = None
-        self.model = None
-
-        if genai_pkg is None:
-            logger.warning("No GenAI package available (google.genai or google.generativeai). Assistant disabled.")
-            return
-
-        try:
-            if hasattr(genai_pkg, "configure"):
-                try:
-                    genai_pkg.configure(api_key=GEMINI_API_KEY)
-                except Exception:
-                    pass
-
-            if hasattr(genai_pkg, "Client"):
-                try:
-                    self.client = genai_pkg.Client(api_key=GEMINI_API_KEY)
-                except Exception:
-                    try:
-                        self.client = genai_pkg.Client()
-                    except Exception:
-                        self.client = genai_pkg
-            elif hasattr(genai_pkg, "TextGenerationClient"):
-                try:
-                    self.client = genai_pkg.TextGenerationClient()
-                except Exception:
-                    self.client = genai_pkg
-            elif hasattr(genai_pkg, "GenerativeModel"):
-                try:
-                    self.model = genai_pkg.GenerativeModel(model_name=MODEL_NAME)
-                except Exception:
-                    self.model = None
-            else:
-                self.client = genai_pkg
-
-            logger.info(f"Gemini assistant initialized with model: {MODEL_NAME}")
-
-        except Exception as e:
-            logger.error(f"Failed to initialize Gemini assistant: {e}")
-            self.client = None
-            self.model = None
-
-    def is_active(self) -> bool:
-        return self.client is not None or self.model is not None
-
-    def _extract_text(self, response) -> str:
-        if response is None:
-            return ""
-        if isinstance(response, str):
-            return response
-        try:
-            if hasattr(response, "text"):
-                t = getattr(response, "text")
-                if isinstance(t, str):
-                    return t
-            if hasattr(response, "content"):
-                c = getattr(response, "content")
-                if isinstance(c, str):
-                    return c
-            if hasattr(response, "candidates"):
-                candidates = getattr(response, "candidates")
-                if candidates:
-                    first = candidates[0]
-                    if isinstance(first, dict):
-                        for key in ("content", "text"):
-                            if key in first:
-                                val = first[key]
-                                if isinstance(val, str):
-                                    return val
-                                if isinstance(val, list) and val:
-                                    return val[0]
-                    if hasattr(first, "text"):
-                        return getattr(first, "text")
-                    return str(first)
-            if isinstance(response, dict):
-                if "candidates" in response and response["candidates"]:
-                    cand = response["candidates"][0]
-                    if isinstance(cand, dict):
-                        for key in ("content", "text"):
-                            if key in cand:
-                                val = cand[key]
-                                if isinstance(val, str):
-                                    return val
-                                if isinstance(val, list) and val:
-                                    return val[0]
-                    return str(cand)
-                if "output" in response and response["output"]:
-                    out = response["output"][0]
-                    if isinstance(out, dict) and "content" in out:
-                        c = out["content"]
-                        if isinstance(c, list) and c:
-                            first = c[0]
-                            if isinstance(first, dict) and "text" in first:
-                                return first["text"]
-                            if isinstance(first, str):
-                                return first
-                        if isinstance(c, str):
-                            return c
-            return str(response)
-        except Exception:
-            try:
-                return str(response)
-            except Exception:
-                return ""
-
-    def get_advice(self, disease: str, confidence: float, region: Optional[str] = None, language: str = "en") -> str:
-        if not self.is_active():
-            logger.warning("AI assistant called but not active")
-            return "AI assistant is currently unavailable. Please check API key configuration."
-
-        if "healthy plant" in disease.lower():
-            prompt = (
-                f"A tomato plant is healthy (confidence: {confidence:.1%}). "
-                f"Give 3 brief tips to maintain this plant's health."
-            )
-        else:
-            prompt = (
-                f"A tomato plant is affected by {disease} (confidence: {confidence:.1%}). "
-                f"Provide concise advice for a farmer:\n"
-                f"1. Immediate Action\n"
-                f"2. Organic Solution\n"
-                f"3. Prevention"
-            )
-
-        if region:
-            prompt += f"\nThe farm is located in {region}. Tailor the advice to this region."
-
-        if language and language != "en":
-            prompt += f"\nProvide the advice in {language}."
-
-        try:
-            if self.client:
-                try:
-                    if hasattr(self.client, "responses") and hasattr(self.client.responses, "generate"):
-                        resp = self.client.responses.generate(model=MODEL_NAME, input=prompt)
-                        return self._extract_text(resp)
-                    if hasattr(self.client, "generate_text"):
-                        resp = self.client.generate_text(model=MODEL_NAME, input=prompt)
-                        return self._extract_text(resp)
-                    if hasattr(self.client, "generate"):
-                        try:
-                            resp = self.client.generate(model=MODEL_NAME, prompt=prompt)
-                        except TypeError:
-                            resp = self.client.generate(prompt)
-                        return self._extract_text(resp)
-                    if hasattr(self.client, "generate_content"):
-                        resp = self.client.generate_content(prompt)
-                        return self._extract_text(resp)
-                except Exception as e:
-                    logger.error(f"GenAI client generation error: {e}")
-
-            if self.model and hasattr(self.model, "generate_content"):
-                try:
-                    resp = self.model.generate_content(prompt)
-                    return self._extract_text(resp)
-                except Exception as e:
-                    logger.error(f"GenAI model generation error: {e}")
-
-        except Exception as e:
-            logger.error(f"GenAI generation error: {e}")
-
-        return "Could not generate advice at this time. Please try again later."
-
-
-# Create Agricultural assistant instance
-agri_assistant = AgriAssistant()
+[33m9aac3a9[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m Increase max time for health endpoint ping to 60 seconds
+[33m7cdffa8[m bug: fixed issue with api services.
+[33m657d01b[m bug: fixed issue with api services.
+[33m21ce6b5[m bug: fixed issue with api services.
+[33m6099b29[m bug: fixed issue with api services.
+[33ma271b08[m bug: fixed issue with api services.
+[33m8a86206[m Adjusted the api response
+[33m37ad27f[m Added Binary classifier as tomato leaf validator
+[33mf27f1f3[m Updated cron job frequency
+[33m3ecdd53[m Activate scheduled workflow
+[33me2197d3[m ping endpoint for consistency
+[33m0fa3b14[m added api doc
+[33m3b05250[m update the api doc
+[33md46aeb9[m[33m ([m[1;31morigin/dev[m[33m)[m Update the api responses.
+[33m6c6659c[m Update the api responses.
+[33m3723e97[m Updated api response
+[33m59b8c25[m Updated api response
+[33m6d94406[m Added proper response for services - (prediction | llm)
+[33m55eb00f[m Added proper response for services - (prediction | llm)
+[33m84130d1[m Added proper response for services - (prediction | llm)
+[33mf7588bb[m Added Gemini AI assistant integration
+[33md35063c[m Merge branch 'dev' of https://github.com/philipakomolafe/branchfusionNet into dev
+[33m2ce84f1[m Updated the secret files
+[33m0aca457[m Added the LLM agricultural adviser
+[33m95d200e[m Merge pull request #1 from philipakomolafe/main
+[33me47230f[m Update the ENV file
+[33m4a7de70[m Update to the .env
+[33m3ee1aec[m Updated api service.
+[33mbe8a2ad[m Added API DOC
+[33m9243084[m Added TFLITE model
+[33m2b1db95[m Added TFLITE model
+[33m58addbe[m Added TFLITE model
+[33m06abaff[m Updated the prediction service and API
+[33m923e1c8[m Updated the tflite workflow file
+[33m5a6d520[m Updated the tflite workflow file
+[33mfaabde8[m Updated the tflite workflow file
+[33m0183a90[m Updated the tflite workflow file
+[33mc057cb4[m Updated the workflow file
+[33mc9bb6f8[m Added workflow for model conversion to tflite
+[33m7bce3fb[m Added prediction validator
+[33m5ce22b7[m Add produciton deployment config.
+[33m0a1d99d[m tomato leaf api service
+[33m7c9bb89[m initial prediction api service commit
+[33m2f0f46b[m initial prediction api service commit
+[33m8157618[m Initial commit
