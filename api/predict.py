@@ -61,7 +61,12 @@ async def predict_plant_disease(
 
         # Return the clean result directly.
         return result
-        
+
+    except HTTPException:
+        # Re-raise intentional HTTP errors (e.g. 400 for non-image files)
+        # untouched instead of letting them fall into the generic handler below.
+        raise
+
     except FileNotFoundError as e:
         logger.error(f"Model file not found: {e}")
         raise HTTPException(status_code=500, detail="Model file not found. Please ensure the model is available.")
