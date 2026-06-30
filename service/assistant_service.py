@@ -1,17 +1,17 @@
 import os
 import logging
 from typing import Optional
-import google.generativeai as genai
 from dotenv import load_dotenv
 
 load_dotenv()
 
 logger = logging.getLogger(__name__)
 
-# These read from your .env file or Render environment variables
-# The string inside os.getenv() is the VARIABLE NAME, not the value
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-MODEL_NAME = os.getenv("MODEL_NAME", "gemini-2.5-flash")  
+MODEL_NAME = os.getenv("MODEL_NAME", "gemini-2.5-flash")
+
+# Use the new google.genai package
+from google import genai
 
 
 class AgriAssistant:
@@ -23,22 +23,17 @@ class AgriAssistant:
                 "GEMINI_API_KEY environment variable not set. "
                 "AI assistant will be disabled."
             )
-            self.model = None
+            self.client = None
             return
-
         try:
-            genai.configure(api_key=GEMINI_API_KEY)
-            self.model = genai.GenerativeModel(model_name=MODEL_NAME)
-            logger.info(
-                f"Gemini assistant initialized successfully with model: {MODEL_NAME}"
-            )
+            self.client = genai.Client(api_key=GEMINI_API_KEY)
+            logger.info(f"Gemini assistant initialized successfully with model: {MODEL_NAME}")
         except Exception as e:
             logger.error(f"Failed to initialize Gemini assistant: {e}")
-            self.model = None
+            self.client = None
 
     def is_active(self) -> bool:
-        """Check if the AI assistant is active and ready to use."""
-        return self.model is not None
+        return self.client is not None
 
     def get_advice(
         self,
@@ -47,18 +42,12 @@ class AgriAssistant:
         region: Optional[str] = None,
         language: str = "en",
     ) -> str:
-        """Get agricultural advice based on detected disease and confidence level."""
         if not self.is_active():
             logger.warning("AI assistant called but not active")
-            return (
-                "AI assistant is currently unavailable. "
-                "Please check API key configuration."
-            )
+            return "AI assistant is currently unavailable. Please check API key configuration."
 
-        # Clean disease name for prompt
         disease_name = disease.replace("Tomato___", "").replace("_", " ")
 
-        # Construct prompt based on whether plant is healthy or diseased
         if "healthy" in disease_name.lower():
             prompt = (
                 f"A tomato plant is healthy (confidence: {confidence:.1%}). "
@@ -77,16 +66,25 @@ class AgriAssistant:
         if region:
             prompt += f"\nThe farm is located in {region}. Tailor the advice to this region."
 
-        if language and language != "en":
-            prompt += f"\nProvide the advice in {language}."
+        # Explicit language instruction — critical for Yoruba/Hausa
+        lang_map = {"yo": "Yoruba", "ha": "Hausa", "en": "English"}
+        full_lang = lang_map.get(language, language)
+
+        if full_lang != "English":
+            prompt += (
+                f"\nProvide your ENTIRE response in {full_lang} language only. "
+                f"Do not include any English words or sentences."
+            )
 
         try:
-            response = self.model.generate_content(prompt)
+            response = self.client.models.generate_content(
+                model=MODEL_NAME,
+                contents=prompt,
+            )
             return response.text.strip()
         except Exception as e:
             logger.error(f"Gemini generation error: {e}")
             return "Could not generate advice at this time. Please try again later."
 
 
-# Singleton instance used by predict.py
 agri_assistant = AgriAssistant()
