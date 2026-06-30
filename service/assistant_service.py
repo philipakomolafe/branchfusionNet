@@ -3,14 +3,18 @@ import logging
 from typing import Optional
 from dotenv import load_dotenv
 
-load_dotenv()
+# 1. Safely load local .env if it exists. 
+# If it's missing (on your cloud server), it skips this without breaking.
+if os.path.exists(".env"):
+    load_dotenv()
 
 logger = logging.getLogger(__name__)
 
+# 2. Extract configuration variables from the system environment
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 MODEL_NAME = os.getenv("MODEL_NAME", "gemini-2.5-flash")
 
-# Use the new google.genai package
+# Import the correct Google GenAI library
 from google import genai
 
 
@@ -18,16 +22,19 @@ class AgriAssistant:
     """Agricultural AI assistant using Gemini model."""
 
     def __init__(self):
+        # 3. Explicitly verify that the key string actually exists
         if not GEMINI_API_KEY:
             logger.warning(
-                "GEMINI_API_KEY environment variable not set. "
-                "AI assistant will be disabled."
+                "GEMINI_API_KEY environment variable not detected by host server. "
+                "AI assistant fallback triggered."
             )
             self.client = None
             return
+            
         try:
+            # 4. Explicitly bind the variable string into the Client initialization
             self.client = genai.Client(api_key=GEMINI_API_KEY)
-            logger.info(f"Gemini assistant initialized successfully with model: {MODEL_NAME}")
+            logger.info(f"Gemini assistant initialized successfully on host with model: {MODEL_NAME}")
         except Exception as e:
             logger.error(f"Failed to initialize Gemini assistant: {e}")
             self.client = None
@@ -72,8 +79,8 @@ class AgriAssistant:
 
         if full_lang != "English":
             prompt += (
-                f"\nProvide your ENTIRE response in {full_lang} language only. "
-                f"Do not include any English words or sentences."
+                f"\nTranslate the advice accurately into {full_lang}. "
+                f"Use regional agricultural terminology where appropriate."
             )
 
         try:
@@ -82,7 +89,6 @@ class AgriAssistant:
                 contents=prompt,
             )
 
-            # Safely verify the response actually contains usable text
             if response and hasattr(response, "text") and response.text:
                 return response.text.strip()
             else:
@@ -90,12 +96,8 @@ class AgriAssistant:
                 return "Could not generate advice. The AI returned an empty response."
 
         except Exception as e:
-            # Log the full traceback so the real cause shows up in Render logs
             logger.error(f"Gemini generation error: {str(e)}", exc_info=True)
-            # Temporarily surface the real error in the API response itself,
-            # so it's visible even without checking server logs.
-            # Remove the str(e) part once the root cause is confirmed and fixed.
-            return f"Could not generate advice due to an internal error: {str(e)}"
+            return "Could not generate advice at this time. Please try again later."
 
 
 agri_assistant = AgriAssistant()
