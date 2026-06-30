@@ -81,10 +81,21 @@ class AgriAssistant:
                 model=MODEL_NAME,
                 contents=prompt,
             )
-            return response.text.strip()
+
+            # Safely verify the response actually contains usable text
+            if response and hasattr(response, "text") and response.text:
+                return response.text.strip()
+            else:
+                logger.error(f"Gemini returned an empty response object: {response}")
+                return "Could not generate advice. The AI returned an empty response."
+
         except Exception as e:
-            logger.error(f"Gemini generation error: {e}")
-            return "Could not generate advice at this time. Please try again later."
+            # Log the full traceback so the real cause shows up in Render logs
+            logger.error(f"Gemini generation error: {str(e)}", exc_info=True)
+            # Temporarily surface the real error in the API response itself,
+            # so it's visible even without checking server logs.
+            # Remove the str(e) part once the root cause is confirmed and fixed.
+            return f"Could not generate advice due to an internal error: {str(e)}"
 
 
 agri_assistant = AgriAssistant()
