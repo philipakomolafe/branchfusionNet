@@ -3,14 +3,14 @@ import logging
 from typing import Optional
 from dotenv import load_dotenv
 
-# 1. Safely load local .env if it exists. 
-# If it's missing (on your cloud server), it skips this without breaking.
+# Safely load local .env if it exists.
+# If it's missing (on cloud server), it skips without breaking.
 if os.path.exists(".env"):
     load_dotenv()
 
 logger = logging.getLogger(__name__)
 
-# 2. Extract configuration variables from the system environment
+# Extract configuration variables from the system environment
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 MODEL_NAME = os.getenv("MODEL_NAME", "gemini-2.5-flash")
 
@@ -22,7 +22,7 @@ class AgriAssistant:
     """Agricultural AI assistant using Gemini model."""
 
     def __init__(self):
-        # 3. Explicitly verify that the key string actually exists
+        # Explicitly verify that the key string actually exists
         if not GEMINI_API_KEY:
             logger.warning(
                 "GEMINI_API_KEY environment variable not detected by host server. "
@@ -30,11 +30,13 @@ class AgriAssistant:
             )
             self.client = None
             return
-            
+
         try:
-            # 4. Explicitly bind the variable string into the Client initialization
+            # Explicitly bind the variable string into the Client initialization
             self.client = genai.Client(api_key=GEMINI_API_KEY)
-            logger.info(f"Gemini assistant initialized successfully on host with model: {MODEL_NAME}")
+            logger.info(
+                f"Gemini assistant initialized successfully on host with model: {MODEL_NAME}"
+            )
         except Exception as e:
             logger.error(f"Failed to initialize Gemini assistant: {e}")
             self.client = None
@@ -51,7 +53,10 @@ class AgriAssistant:
     ) -> str:
         if not self.is_active():
             logger.warning("AI assistant called but not active")
-            return "AI assistant is currently unavailable. Please check API key configuration."
+            return (
+                "AI assistant is currently unavailable. "
+                "Please check API key configuration."
+            )
 
         disease_name = disease.replace("Tomato___", "").replace("_", " ")
 
@@ -71,16 +76,21 @@ class AgriAssistant:
             )
 
         if region:
-            prompt += f"\nThe farm is located in {region}. Tailor the advice to this region."
+            prompt += (
+                f"\nThe farm is located in {region}. "
+                f"Tailor the advice to this region."
+            )
 
-        # Explicit language instruction — critical for Yoruba/Hausa
+        # Language instruction — strict enforcement for Yoruba/Hausa
         lang_map = {"yo": "Yoruba", "ha": "Hausa", "en": "English"}
-        full_lang = lang_map.get(language, language)
+        full_lang = lang_map.get(language, "English")
 
         if full_lang != "English":
             prompt += (
-                f"\nTranslate the advice accurately into {full_lang}. "
-                f"Use regional agricultural terminology where appropriate."
+                f"\nYou MUST respond ONLY in {full_lang}. "
+                f"Do NOT write anything in English. "
+                f"Do NOT show English first and then translate. "
+                f"Your entire response from start to finish must be in {full_lang} only."
             )
 
         try:
@@ -92,7 +102,9 @@ class AgriAssistant:
             if response and hasattr(response, "text") and response.text:
                 return response.text.strip()
             else:
-                logger.error(f"Gemini returned an empty response object: {response}")
+                logger.error(
+                    f"Gemini returned an empty response object: {response}"
+                )
                 return "Could not generate advice. The AI returned an empty response."
 
         except Exception as e:
